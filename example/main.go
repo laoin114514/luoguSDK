@@ -23,6 +23,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	fmt.Printf("Cookie 文件路径: %s\n", client.Auth.CookiePath())
+
 	// 2. 检查是否已经登录
 	if client.Auth.IsAuthenticated() {
 		fmt.Println("已登录（通过持久化 cookie 恢复）")
