@@ -156,6 +156,16 @@ func (c *Client) get(path string) (*http.Response, error) {
 	return c.do(req)
 }
 
+// apiGet 发送带 content-only 头的 GET 请求（确保返回 JSON）
+func (c *Client) apiGet(path string) (*http.Response, error) {
+	req, err := c.newRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("x-luogu-type", "content-only")
+	return c.do(req)
+}
+
 // post 发送 POST 请求
 func (c *Client) post(path string, body interface{}) (*http.Response, error) {
 	req, err := c.newRequest("POST", path, body)
@@ -173,7 +183,11 @@ func parseBody(resp *http.Response, v interface{}) error {
 		return fmt.Errorf("read response body: %w", err)
 	}
 	if err := json.Unmarshal(data, v); err != nil {
-		return fmt.Errorf("unmarshal response: %w", err)
+		preview := string(data)
+		if len(preview) > 300 {
+			preview = preview[:300] + "..."
+		}
+		return fmt.Errorf("unmarshal response (status=%d, body=%s): %w", resp.StatusCode, preview, err)
 	}
 	return nil
 }
@@ -207,7 +221,7 @@ func (c *Client) setCSRF(token string) {
 
 // verifyAuth 校验当前 cookie 是否仍有效
 func (c *Client) verifyAuth() error {
-	resp, err := c.get("/api/user/current")
+	resp, err := c.apiGet("/api/user/current")
 	if err != nil {
 		return err
 	}
