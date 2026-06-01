@@ -1,6 +1,6 @@
 package luogusdk
 
-import "laoin114514/luoguSDK/internal/ocr"
+import "github.com/laoin114514/luoguSDK/internal/ocr"
 
 // DDDDOCRSolver 返回一个使用 ddddocr 的 CaptchaSolver
 func DDDDOCRSolver() CaptchaSolver {

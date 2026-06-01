@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	luoguSDK "laoin114514/luoguSDK"
+	luoguSDK "github.com/laoin114514/luoguSDK"
 )
 
 func main() {
