@@ -14,6 +14,7 @@ func TestClientNewRequestHeaders(t *testing.T) {
 		csrfToken:  "test-csrf-token",
 		maxRetries: 3,
 		backoffFn:  defaultBackoff,
+		userAgent:  "test-ua",
 		httpClient: &http.Client{Jar: jar},
 	}
 
@@ -43,6 +44,7 @@ func TestClientNewRequestNoCSRFForGET(t *testing.T) {
 		csrfToken:  "test-csrf-token",
 		maxRetries: 3,
 		backoffFn:  defaultBackoff,
+		userAgent:  "test-ua",
 		httpClient: &http.Client{Jar: jar},
 	}
 
@@ -69,6 +71,7 @@ func TestClientNoRetryOn4xx(t *testing.T) {
 		cookieJar:  jar,
 		maxRetries: 3,
 		backoffFn:  func(int) time.Duration { return 0 },
+		userAgent:  "test-ua",
 		httpClient: &http.Client{Jar: jar},
 	}
 
@@ -94,6 +97,7 @@ func TestClientRetryOn5xx(t *testing.T) {
 		cookieJar:  jar,
 		maxRetries: 2,
 		backoffFn:  func(int) time.Duration { return 0 },
+		userAgent:  "test-ua",
 		httpClient: &http.Client{Jar: jar},
 	}
 

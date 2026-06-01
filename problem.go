@@ -13,8 +13,8 @@ type ProblemService struct {
 
 // Get 获取题目详情
 func (p *ProblemService) Get(pid string) (*Problem, error) {
-	path := fmt.Sprintf("/problem/%s", pid)
-	resp, err := p.client.apiGet(path)
+	path := fmt.Sprintf("/problem/%s?_contentOnly=1", pid)
+	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
 	}
@@ -36,17 +36,15 @@ func (p *ProblemService) Get(pid string) (*Problem, error) {
 // Search 搜索题目
 func (p *ProblemService) Search(params SearchParams) (*SearchResult, error) {
 	q := url.Values{}
+	q.Set("_contentOnly", "1")
 	if params.Keyword != "" {
 		q.Set("keyword", params.Keyword)
 	}
 	if params.Page > 0 {
 		q.Set("page", fmt.Sprintf("%d", params.Page))
 	}
-	path := "/problem/list"
-	if len(q) > 0 {
-		path += "?" + q.Encode()
-	}
-	resp, err := p.client.apiGet(path)
+	path := "/problem/list?" + q.Encode()
+	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +78,8 @@ func (p *ProblemService) Search(params SearchParams) (*SearchResult, error) {
 
 // GetSolutions 获取题解列表
 func (p *ProblemService) GetSolutions(pid string, page int) (*SolutionList, error) {
-	path := fmt.Sprintf("/problem/solution?pid=%s&page=%d", pid, page)
-	resp, err := p.client.apiGet(path)
+	path := fmt.Sprintf("/problem/solution?pid=%s&page=%d&_contentOnly=1", pid, page)
+	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +113,8 @@ func (p *ProblemService) GetSolutions(pid string, page int) (*SolutionList, erro
 
 // GetSolutionDetail 获取题解详情
 func (p *ProblemService) GetSolutionDetail(sid string) (*Solution, error) {
-	path := fmt.Sprintf("/problem/solution/%s", sid)
-	resp, err := p.client.apiGet(path)
+	path := fmt.Sprintf("/problem/solution/%s?_contentOnly=1", sid)
+	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
 	}
@@ -139,8 +137,8 @@ func (p *ProblemService) GetSolutionDetail(sid string) (*Solution, error) {
 
 // GetTranslation 获取题目翻译
 func (p *ProblemService) GetTranslation(pid string) ([]Translation, error) {
-	path := fmt.Sprintf("/problem/translation?pid=%s", pid)
-	resp, err := p.client.apiGet(path)
+	path := fmt.Sprintf("/problem/translation?pid=%s&_contentOnly=1", pid)
+	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
 	}

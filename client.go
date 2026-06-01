@@ -13,7 +13,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-const defaultUA = "Go-http-client/2.0"
+const defaultUA = "LuoguSDK/1.0"
 
 // Client 洛谷 SDK 客户端
 type Client struct {
@@ -23,6 +23,7 @@ type Client struct {
 	cookieFile string
 	maxRetries int
 	backoffFn  func(int) time.Duration
+	userAgent  string
 
 	Auth    *AuthService
 	Problem *ProblemService
@@ -55,6 +56,13 @@ func WithTimeout(d time.Duration) ClientOption {
 	}
 }
 
+// WithUserAgent 设置自定义 User-Agent
+func WithUserAgent(ua string) ClientOption {
+	return func(c *Client) {
+		c.userAgent = ua
+	}
+}
+
 // NewClient 创建新的洛谷客户端
 func NewClient(opts ...ClientOption) (*Client, error) {
 	jar, err := newExportableCookieJar()
@@ -72,6 +80,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 		cookieFile: cookiePath,
 		maxRetries: 3,
 		backoffFn:  defaultBackoff,
+		userAgent:  defaultUA,
 		httpClient: &http.Client{
 			Jar:     jar,
 			Timeout: 30 * time.Second,
@@ -111,8 +120,10 @@ func (c *Client) newRequest(method, path string, body interface{}) (*http.Reques
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	req.Header.Set("User-Agent", defaultUA)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", c.userAgent)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	req.Header.Set("Referer", luoguBaseURL)
 
 	if c.csrfToken != "" && method != "GET" {
@@ -153,16 +164,6 @@ func (c *Client) get(path string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
-}
-
-// apiGet 发送带 content-only 头的 GET 请求（确保返回 JSON）
-func (c *Client) apiGet(path string) (*http.Response, error) {
-	req, err := c.newRequest("GET", path, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("x-luogu-type", "content-only")
 	return c.do(req)
 }
 
@@ -221,7 +222,7 @@ func (c *Client) setCSRF(token string) {
 
 // verifyAuth 校验当前 cookie 是否仍有效
 func (c *Client) verifyAuth() error {
-	resp, err := c.apiGet("/api/user/current")
+	resp, err := c.get("/api/user/current")
 	if err != nil {
 		return err
 	}
