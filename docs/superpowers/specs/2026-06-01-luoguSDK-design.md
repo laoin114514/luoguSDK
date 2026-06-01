@@ -1,39 +1,39 @@
-# LuoguSDK Design Document
+# LuoguSDK 设计文档
 
-## Overview
+## 概述
 
-A Go SDK for the Luogu (洛谷) platform API. Phase 1 covers authentication (login, captcha, cookie persistence) and read-only problem operations (fetch, search, solutions, translations). No submission/code-execution support in this phase.
+洛谷 (luogu.com.cn) 平台的 Go SDK。第一阶段覆盖认证（登录、验证码、Cookie 持久化）和题目只读操作（获取、搜索、题解、翻译）。本阶段不涉及提交/代码执行。
 
-## Architecture: Client + Service Layers
+## 架构：Client + 服务分层
 
 ```
-Client (HTTP session, CSRF, cookie management)
-  ├── AuthService   (login, logout, captcha, cookie persistence)
-  └── ProblemService (fetch, search, solutions, translations)
+Client (HTTP 会话、CSRF、Cookie 管理)
+  ├── AuthService   (登录、登出、验证码、Cookie 持久化)
+  └── ProblemService (题目获取、搜索、题解、翻译)
 ```
 
-**Client** owns the `http.Client` (with cookie jar), the CSRF token, and the session cookies (`_uid`, `__client_id`). Services are lightweight wrappers that hold a pointer back to Client and make API calls through it.
+**Client** 持有 `http.Client`（含 CookieJar）、CSRF Token、会话 cookie（`_uid`、`__client_id`）。每个 Service 是轻量封装，持有 Client 指针，通过 Client 发起 HTTP 请求。
 
-All non-GET requests automatically inject headers: `X-CSRF-TOKEN`, `Referer: https://www.luogu.com.cn/`, `Content-Type: application/json`. User-Agent defaults to Go's standard UA (avoids Luogu anti-bot rules — must not contain `python-requests` or start with `mozilla/`).
+所有非 GET 请求自动注入请求头：`X-CSRF-TOKEN`、`Referer: https://www.luogu.com.cn/`、`Content-Type: application/json`。User-Agent 默认使用 Go 标准 UA（规避洛谷反爬规则——不能包含 `python-requests`，不能以 `mozilla/` 开头）。
 
-## Package Structure
+## 包结构
 
 ```
 luoguSDK/
-├── client.go       # Client struct, NewClient, configuration, HTTP helpers
-├── auth.go         # AuthService: Login, Logout, Lock, Unlock, RefreshCSRF, GetCaptcha, VerifyAuth
-├── problem.go      # ProblemService: Get, Search, GetSolutions, GetSolutionDetail, GetTranslation
-├── captcha.go      # CaptchaSolver type, CaptchaSolverFunc, internal OCR adapter
-├── errors.go       # Error types: AuthError, CSRFError, NetworkError, UnauthorizedError
-├── types.go        # Shared types: LoginRequest, LoginResponse, Problem, Solution, etc.
-├── cookiestore.go  # Cookie persist/load to file, TryLoadCookies, SaveCookies
-├── retry.go        # Retry logic, backoff strategies
+├── client.go       # Client 结构体、NewClient、配置项、HTTP 工具方法
+├── auth.go         # AuthService: Login、Logout、Lock、Unlock、RefreshCSRF、GetCaptcha、VerifyAuth
+├── problem.go      # ProblemService: Get、Search、GetSolutions、GetSolutionDetail、GetTranslation
+├── captcha.go      # CaptchaSolver 类型、内置 OCR 构造器
+├── errors.go       # 错误类型: AuthError、CSRFError、NetworkError、UnauthorizedError
+├── types.go        # 公共类型: LoginRequest、LoginResponse、Problem、Solution 等
+├── cookiestore.go  # Cookie 持久化: TryLoadCookies、SaveCookies
+├── retry.go        # 重试逻辑、退避策略
 ├── internal/
-│   └── ocr/        # Built-in OCR tool (see Captcha Design section)
+│   └── ocr/        # 内置 OCR 工具 (ddddocr 封装)
 └── go.mod
 ```
 
-## Authentication Flow
+## 认证流程
 
 ```
 NewClient(opts...)
@@ -53,26 +53,26 @@ NewClient(opts...)
             SaveCookies()     # 持久化到文件
 ```
 
-## API Endpoints
+## API 端点
 
-| Method | Path | Purpose |
+| 方法 | 路径 | 用途 |
 |--------|------|---------|
-| GET | `/` | Extract CSRF token from HTML meta tag |
-| GET | `/lg4/captcha` | Get captcha image (JPEG) |
-| POST | `/do-auth/password` | Login with username/password/captcha |
-| POST | `/auth/logout` | Logout |
-| GET | `/problem/:pid` | Get problem detail (JSON API) |
-| GET | `/problem/list` | Search problems |
-| GET | `/problem/solution` | List solutions for a problem |
-| GET | `/problem/solution/:sid` | Get solution detail |
-| GET | `/problem/translation` | Get problem translation |
+| GET | `/` | 从 HTML meta 标签提取 CSRF token |
+| GET | `/lg4/captcha` | 获取验证码图片 (JPEG) |
+| POST | `/do-auth/password` | 用户名/密码/验证码登录 |
+| POST | `/auth/logout` | 登出 |
+| GET | `/problem/:pid` | 获取题目详情 (JSON API) |
+| GET | `/problem/list` | 搜索题目列表 |
+| GET | `/problem/solution` | 获取某题的题解列表 |
+| GET | `/problem/solution/:sid` | 获取题解详情 |
+| GET | `/problem/translation` | 获取题目翻译 |
 
-**Note:** Exact query parameters for problem endpoints will be determined during implementation by inspecting the Luogu web app's network requests. The API docs (`0f-0b/luogu-api-docs`) provide type references but not all query parameter details.
+**注：** 题目相关端点的查询参数将在实现阶段通过抓包洛谷 Web 应用的实际请求来确定。第三方 API 文档 (`0f-0b/luogu-api-docs`) 提供了类型引用，但未列出全部查询参数细节。
 
-## Core Types
+## 核心类型
 
 ```go
-// --- Captcha ---
+// --- 验证码 ---
 type CaptchaSolver func(image []byte) (string, error)
 
 // --- Client ---
@@ -90,7 +90,7 @@ type Client struct {
 
 type ClientOption func(*Client)
 
-// --- Auth ---
+// --- 认证 ---
 type LoginRequest struct {
     Username string `json:"username"`
     Password string `json:"password"`
@@ -100,23 +100,23 @@ type LoginRequest struct {
 type LoginResponse struct {
     UID      int    `json:"uid"`
     ClientID string `json:"client_id"`
-    // Additional fields from Luogu response
+    // 洛谷响应中的其他字段
 }
 
-// --- Problem ---
+// --- 题目 ---
 type Problem struct {
-    PID         string        `json:"pid"`
-    Title       string        `json:"title"`
-    Difficulty  int           `json:"difficulty"`
-    Background  string        `json:"background"`
-    Description string        `json:"description"`
-    InputFormat string        `json:"inputFormat"`
-    OutputFormat string       `json:"outputFormat"`
-    Samples     []Sample      `json:"samples"`
-    Hints       []string      `json:"hints"`
-    Tags        []Tag         `json:"tags"`
-    TimeLimit   int           `json:"timeLimit"`
-    MemoryLimit int           `json:"memoryLimit"`
+    PID          string        `json:"pid"`
+    Title        string        `json:"title"`
+    Difficulty   int           `json:"difficulty"`
+    Background   string        `json:"background"`
+    Description  string        `json:"description"`
+    InputFormat  string        `json:"inputFormat"`
+    OutputFormat string        `json:"outputFormat"`
+    Samples      []Sample      `json:"samples"`
+    Hints        []string      `json:"hints"`
+    Tags         []Tag         `json:"tags"`
+    TimeLimit    int           `json:"timeLimit"`
+    MemoryLimit  int           `json:"memoryLimit"`
 }
 
 type Sample struct {
@@ -130,11 +130,11 @@ type Tag struct {
 }
 
 type SearchParams struct {
-    Keyword    string
-    Difficulty []int
-    Tags       []int
-    Page       int
-    PageSize   int
+    Keyword    string  // 搜索关键词
+    Difficulty []int   // 难度范围 [min, max]
+    Tags       []int   // 标签 ID 列表
+    Page       int     // 页码
+    PageSize   int     // 每页条数 (默认 20)
 }
 
 type SearchResult struct {
@@ -151,11 +151,11 @@ type ProblemSummary struct {
 }
 
 type Solution struct {
-    ID       int
-    Author   UserInfo
-    Title    string
-    Content  string
-    Likes    int
+    ID      int
+    Author  UserInfo
+    Title   string
+    Content string // Markdown
+    Likes   int
 }
 
 type SolutionList struct {
@@ -165,10 +165,10 @@ type SolutionList struct {
 }
 
 type SolutionSummary struct {
-    ID       int
-    Title    string
-    Author   UserInfo
-    Likes    int
+    ID     int
+    Title  string
+    Author UserInfo
+    Likes  int
 }
 
 type Translation struct {
@@ -184,48 +184,48 @@ type UserInfo struct {
 }
 ```
 
-## Cookie Persistence
+## Cookie 持久化
 
-- Default path: `~/.luogu/cookies.json`
-- A custom `ExportableCookieJar` wraps `net/http/cookiejar.Jar` and adds `Export()` / `Import()` methods to serialize/deserialize all stored cookies to/from JSON
-- Cookies are saved keyed by domain, containing `_uid` and `__client_id` values
-- `TryLoadCookies()` at client init; `SaveCookies()` after successful login
-- Configurable via `WithCookieFile(path string)`
+- 默认路径：`~/.luogu/cookies.json`
+- 自定义 `ExportableCookieJar` 包装 `net/http/cookiejar.Jar`，新增 `Export()` / `Import()` 方法，将所有 cookie 序列化/反序列化为 JSON
+- Cookie 按域名保存，主要包含 `_uid` 和 `__client_id`
+- `TryLoadCookies()` 在 Client 初始化时调用；`SaveCookies()` 在登录成功后调用
+- 可通过 `WithCookieFile(path string)` 自定义路径
 
-## Retry Mechanism
+## 重试机制
 
-- Default: 3 retries with exponential backoff (1s → 2s → 4s)
-- Only retries on network errors and 5xx responses, never on 4xx
-- Configurable: `WithRetry(maxRetries int, backoffFn func(int) time.Duration)`
+- 默认：3 次重试，指数退避 (1s → 2s → 4s)
+- 仅对网络错误和 5xx 响应重试，4xx 不重试（业务错误重试无意义）
+- 可配置：`WithRetry(maxRetries int, backoffFn func(int) time.Duration)`
 
-## CaptchaSolver Design
+## CaptchaSolver 设计
 
-- **Type:** `type CaptchaSolver func(image []byte) (string, error)` — simple function type, consumers implement their own
-- **Built-in OCR:** SDK provides a `NewDDDDOCR()` constructor that wraps an external `ddddocr` process (Python), accepting the image bytes and returning the recognized text
-  - Alternative: pure Go OCR using a lightweight library (TBD during implementation based on accuracy testing)
-  - The built-in solver lives in `internal/ocr/` and is exposed via a public constructor in `captcha.go`
-  - Users can also plug in their own solver (e.g., cloud OCR API, manual input)
+- **类型：** `type CaptchaSolver func(image []byte) (string, error)` — 函数类型，由调用方实现
+- **内置 OCR：** SDK 提供 `NewDDDDOCR()` 构造器，封装 Python `ddddocr` 进程，接收图片字节并返回识别文本
+  - 备选方案：实现阶段测试后，如纯 Go OCR 库准确率满足要求则替换
+  - 内置 solver 代码位于 `internal/ocr/`，通过 `captcha.go` 中的公开构造器暴露
+  - 用户也可自行接入其他 solver（如云端 OCR API、手动输入）
 
-## Error Handling
+## 错误处理
 
 ```go
-type AuthError struct { Code, Message string }     // 登录失败
-type CSRFError struct{ Err error }                  // CSRF 获取/过期
-type NetworkError struct{ Err error }               // 网络超时等
-type UnauthorizedError struct{}                     // 未登录调用需认证的 API
+type AuthError struct{ Code, Message string }     // 登录失败
+type CSRFError struct{ Err error }                 // CSRF 获取/过期
+type NetworkError struct{ Err error }              // 网络超时等
+type UnauthorizedError struct{}                    // 未登录调用需认证的 API
 ```
 
-All errors implement the `error` interface and wrap the underlying cause (via `errors.Unwrap`).
+所有错误类型实现 `error` 接口，并通过 `errors.Unwrap` 暴露底层错误。
 
-## Testing Strategy
+## 测试策略
 
-- Unit tests for `Client` request building (headers, CSRF injection) with `net/http/httptest`
-- Integration tests against Luogu API with a test account
-- OCR tests with sample captcha images
-- Cookie persistence round-trip tests
+- 使用 `net/http/httptest` 对 Client 请求构建（请求头注入、CSRF 注入）进行单元测试
+- 使用测试账号对洛谷 API 进行集成测试
+- 使用示例验证码图片进行 OCR 测试
+- Cookie 持久化往返测试（保存 → 加载 → 验证）
 
-## Dependencies
+## 依赖
 
-- `github.com/PuerkitoBio/goquery` — HTML parsing (CSRF token extraction)
-- `github.com/google/go-cmp` — test comparisons (dev only)
-- Standard library: `net/http`, `net/http/cookiejar`, `encoding/json`, `time`, `errors`
+- `github.com/PuerkitoBio/goquery` — HTML 解析（提取 CSRF token）
+- `github.com/google/go-cmp` — 测试对比（仅开发环境）
+- 标准库：`net/http`、`net/http/cookiejar`、`encoding/json`、`time`、`errors`
