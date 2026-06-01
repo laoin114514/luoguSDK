@@ -3,6 +3,7 @@ package luogusdk
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 // ProblemService 题目服务
@@ -12,7 +13,7 @@ type ProblemService struct {
 
 // Get 获取题目详情
 func (p *ProblemService) Get(pid string) (*Problem, error) {
-	path := fmt.Sprintf("/problem/%s", pid)
+	path := fmt.Sprintf("/problem/%s?_contentOnly=1", pid)
 	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
@@ -24,26 +25,25 @@ func (p *ProblemService) Get(pid string) (*Problem, error) {
 	}
 
 	var result struct {
-		Data struct {
-			Problem Problem `json:"problem"`
-		} `json:"data"`
+		Problem Problem `json:"problem"`
 	}
 	if err := parseBody(resp, &result); err != nil {
 		return nil, err
 	}
-	return &result.Data.Problem, nil
+	return &result.Problem, nil
 }
 
 // Search 搜索题目
 func (p *ProblemService) Search(params SearchParams) (*SearchResult, error) {
-	query := fmt.Sprintf("keyword=%s&page=%d&_contentOnly=1", params.Keyword, params.Page)
-	if len(params.Difficulty) == 2 {
-		query += fmt.Sprintf("&difficulty=%d,%d", params.Difficulty[0], params.Difficulty[1])
+	q := url.Values{}
+	q.Set("_contentOnly", "1")
+	if params.Keyword != "" {
+		q.Set("keyword", params.Keyword)
 	}
-	for _, tag := range params.Tags {
-		query += fmt.Sprintf("&tag=%d", tag)
+	if params.Page > 0 {
+		q.Set("page", fmt.Sprintf("%d", params.Page))
 	}
-	path := "/problem/list?" + query
+	path := "/problem/list?" + q.Encode()
 	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
@@ -55,21 +55,24 @@ func (p *ProblemService) Search(params SearchParams) (*SearchResult, error) {
 	}
 
 	var result struct {
-		Data struct {
+		CurrentData struct {
 			Problems struct {
-				Result []ProblemSummary `json:"result"`
-				Total  int              `json:"total"`
-				Page   int              `json:"page"`
+				Result    []ProblemSummary `json:"problems"`
+				Count     int              `json:"count"`
+				TotalPage int              `json:"totalPages"`
+				Page      int              `json:"page"`
+				PerPage   int              `json:"perPage"`
 			} `json:"problems"`
-		} `json:"data"`
+		} `json:"currentData"`
 	}
 	if err := parseBody(resp, &result); err != nil {
 		return nil, err
 	}
 	return &SearchResult{
-		Problems: result.Data.Problems.Result,
-		Total:    result.Data.Problems.Total,
-		Page:     result.Data.Problems.Page,
+		Problems: result.CurrentData.Problems.Result,
+		Total:    result.CurrentData.Problems.Count,
+		Page:     result.CurrentData.Problems.Page,
+		PerPage:  result.CurrentData.Problems.PerPage,
 	}, nil
 }
 
@@ -87,21 +90,24 @@ func (p *ProblemService) GetSolutions(pid string, page int) (*SolutionList, erro
 	}
 
 	var result struct {
-		Data struct {
+		CurrentData struct {
 			Solutions struct {
-				Result []SolutionSummary `json:"result"`
-				Total  int               `json:"total"`
-				Page   int               `json:"page"`
+				Result    []SolutionSummary `json:"solutions"`
+				Count     int               `json:"count"`
+				TotalPage int               `json:"totalPages"`
+				Page      int               `json:"page"`
+				PerPage   int               `json:"perPage"`
 			} `json:"solutions"`
-		} `json:"data"`
+		} `json:"currentData"`
 	}
 	if err := parseBody(resp, &result); err != nil {
 		return nil, err
 	}
 	return &SolutionList{
-		Solutions: result.Data.Solutions.Result,
-		Total:     result.Data.Solutions.Total,
-		Page:      result.Data.Solutions.Page,
+		Solutions: result.CurrentData.Solutions.Result,
+		Total:     result.CurrentData.Solutions.Count,
+		Page:      result.CurrentData.Solutions.Page,
+		PerPage:   result.CurrentData.Solutions.PerPage,
 	}, nil
 }
 
@@ -119,14 +125,14 @@ func (p *ProblemService) GetSolutionDetail(sid string) (*Solution, error) {
 	}
 
 	var result struct {
-		Data struct {
+		CurrentData struct {
 			Solution Solution `json:"solution"`
-		} `json:"data"`
+		} `json:"currentData"`
 	}
 	if err := parseBody(resp, &result); err != nil {
 		return nil, err
 	}
-	return &result.Data.Solution, nil
+	return &result.CurrentData.Solution, nil
 }
 
 // GetTranslation 获取题目翻译
@@ -143,12 +149,12 @@ func (p *ProblemService) GetTranslation(pid string) ([]Translation, error) {
 	}
 
 	var result struct {
-		Data struct {
+		CurrentData struct {
 			Translations []Translation `json:"translations"`
-		} `json:"data"`
+		} `json:"currentData"`
 	}
 	if err := parseBody(resp, &result); err != nil {
 		return nil, err
 	}
-	return result.Data.Translations, nil
+	return result.CurrentData.Translations, nil
 }

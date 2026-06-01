@@ -55,18 +55,18 @@ func main() {
 		fmt.Printf("获取题目失败: %v\n", err)
 	} else {
 		fmt.Printf("标题: %s\n", problem.Title)
-		fmt.Printf("难度: %d\n", problem.Difficulty)
-		fmt.Printf("时间限制: %dms\n", problem.TimeLimit)
-		fmt.Printf("内存限制: %dKB\n", problem.MemoryLimit)
+		if problem.Difficulty != nil {
+			fmt.Printf("难度: %d\n", *problem.Difficulty)
+		}
+		fmt.Printf("描述: %s\n", problem.DescText())
+		fmt.Printf("输入格式: %s\n", problem.InputText())
+		fmt.Printf("输出格式: %s\n", problem.OutputText())
+		if problem.Limits != nil {
+			fmt.Printf("时间限制: %dms\n", problem.TimeLimit())
+			fmt.Printf("内存限制: %dKB\n", problem.MemoryLimit())
+		}
 		if len(problem.Tags) > 0 {
-			fmt.Print("标签: ")
-			for i, tag := range problem.Tags {
-				if i > 0 {
-					fmt.Print(", ")
-				}
-				fmt.Print(tag.Name)
-			}
-			fmt.Println()
+			fmt.Printf("标签ID: %v\n", problem.Tags)
 		}
 	}
 
@@ -82,7 +82,11 @@ func main() {
 	} else {
 		fmt.Printf("共 %d 个结果，当前第 %d 页:\n", results.Total, results.Page)
 		for _, p := range results.Problems {
-			fmt.Printf("  %s - %s (难度: %d)\n", p.PID, p.Title, p.Difficulty)
+			diff := "暂无评定"
+			if p.Difficulty != nil {
+				diff = fmt.Sprintf("%d", *p.Difficulty)
+			}
+			fmt.Printf("  %s - %s (难度: %s)\n", p.PID, p.Title, diff)
 		}
 	}
 }
