@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 )
 
+const luoguBaseURL = "https://www.luogu.com.cn/"
+
 // exportableCookie 可序列化的 cookie 结构
 type exportableCookie struct {
 	Name   string `json:"name"`
@@ -40,7 +42,7 @@ func (j *ExportableCookieJar) Cookies(u *url.URL) []*http.Cookie {
 
 // Export 导出所有 cookie 为 JSON 字节
 func (j *ExportableCookieJar) Export() ([]byte, error) {
-	u, _ := url.Parse("https://www.luogu.com.cn/")
+	u, _ := url.Parse(luoguBaseURL)
 	cookies := j.jar.Cookies(u)
 	exported := make([]exportableCookie, 0, len(cookies))
 	for _, c := range cookies {
@@ -60,7 +62,7 @@ func (j *ExportableCookieJar) Import(data []byte) error {
 	if err := json.Unmarshal(data, &cookies); err != nil {
 		return err
 	}
-	u, _ := url.Parse("https://www.luogu.com.cn/")
+	u, _ := url.Parse(luoguBaseURL)
 	for _, c := range cookies {
 		httpCookie := &http.Cookie{
 			Name:   c.Name,
