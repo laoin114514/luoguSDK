@@ -31,15 +31,12 @@ func main() {
 	} else {
 		fmt.Println("未登录，开始登录流程...")
 
-		// 3. 刷新 CSRF token
 		if err := client.Auth.RefreshCSRF(); err != nil {
 			fmt.Printf("获取 CSRF token 失败: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Println("✓ CSRF token 获取成功")
 
-		// 4. 使用内置 OCR 自动识别验证码并登录
-		// 需要提前安装: pip install ddddocr
 		result, err := client.Auth.LoginWithSolver(username, password, luoguSDK.DDDDOCRSolver())
 		if err != nil {
 			fmt.Printf("登录失败: %v\n", err)
@@ -49,29 +46,25 @@ func main() {
 		_ = result
 	}
 
-	// 5. 获取题目示例
+	// 3. 获取题目示例
 	fmt.Println("\n--- 获取题目 P1001 ---")
 	problem, err := client.Problem.Get("P1001")
 	if err != nil {
 		fmt.Printf("获取题目失败: %v\n", err)
 	} else {
 		fmt.Printf("标题: %s\n", problem.Title)
-		if problem.Difficulty != nil {
-			fmt.Printf("难度: %d\n", *problem.Difficulty)
-		}
+		fmt.Printf("难度: %d\n", problem.Difficulty)
 		fmt.Printf("描述: %s\n", problem.DescText())
 		fmt.Printf("输入格式: %s\n", problem.InputText())
 		fmt.Printf("输出格式: %s\n", problem.OutputText())
-		if problem.Limits != nil {
-			fmt.Printf("时间限制: %dms\n", problem.TimeLimit())
-			fmt.Printf("内存限制: %dKB\n", problem.MemoryLimit())
-		}
+		fmt.Printf("时间限制: %dms\n", problem.TimeLimit())
+		fmt.Printf("内存限制: %dKB\n", problem.MemoryLimit())
 		if len(problem.Tags) > 0 {
 			fmt.Printf("标签ID: %v\n", problem.Tags)
 		}
 	}
 
-	// 6. 搜索题目示例
+	// 4. 搜索题目示例
 	fmt.Println("\n--- 搜索题目 (关键词: 排序) ---")
 	results, err := client.Problem.Search(luoguSDK.SearchParams{
 		Keyword:  "排序",
@@ -83,11 +76,7 @@ func main() {
 	} else {
 		fmt.Printf("共 %d 个结果，当前第 %d 页:\n", results.Total, results.Page)
 		for _, p := range results.Problems {
-			diff := "暂无评定"
-			if p.Difficulty != nil {
-				diff = fmt.Sprintf("%d", *p.Difficulty)
-			}
-			fmt.Printf("  %s - %s (难度: %s)\n", p.PID, p.Title, diff)
+			fmt.Printf("  %s - %s (难度: %d)\n", p.PID, p.Title, p.Difficulty)
 		}
 	}
 }

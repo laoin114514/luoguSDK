@@ -13,7 +13,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-const defaultUA = "LuoguSDK/1.0"
+const defaultUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
 
 // Client 洛谷 SDK 客户端
 type Client struct {
@@ -189,6 +189,26 @@ func parseBody(resp *http.Response, v interface{}) error {
 			preview = preview[:300] + "..."
 		}
 		return fmt.Errorf("unmarshal response (status=%d, body=%s): %w", resp.StatusCode, preview, err)
+	}
+	return nil
+}
+
+// parseLentilleContext 从 HTML 页面中提取 <script id="lentille-context"> 内的 JSON 数据
+func parseLentilleContext(resp *http.Response, v interface{}) error {
+	defer resp.Body.Close()
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		return fmt.Errorf("parse HTML: %w", err)
+	}
+
+	jsonStr := doc.Find("script#lentille-context").Text()
+	if jsonStr == "" {
+		return fmt.Errorf("lentille-context script not found in page")
+	}
+
+	if err := json.Unmarshal([]byte(jsonStr), v); err != nil {
+		return fmt.Errorf("unmarshal lentille-context: %w", err)
 	}
 	return nil
 }

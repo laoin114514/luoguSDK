@@ -11,26 +11,29 @@ type ProblemService struct {
 	client *Client
 }
 
-// Get 获取题目详情
+// Get 获取题目详情（从 SSR 页面的 lentille-context 提取 JSON）
 func (p *ProblemService) Get(pid string) (*Problem, error) {
-	path := fmt.Sprintf("/problem/%s?_contentOnly=1", pid)
+	path := fmt.Sprintf("/problem/%s", pid)
 	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
 		return nil, fmt.Errorf("get problem %s: status %d", pid, resp.StatusCode)
 	}
 
 	var result struct {
-		Problem Problem `json:"problem"`
+		Data struct {
+			Problem Problem `json:"problem"`
+		} `json:"data"`
 	}
-	if err := parseBody(resp, &result); err != nil {
+	if err := parseLentilleContext(resp, &result); err != nil {
 		return nil, err
 	}
-	return &result.Problem, nil
+
+	return &result.Data.Problem, nil
 }
 
 // Search 搜索题目

@@ -10,78 +10,65 @@ type LoginRequest struct {
 	Captcha  string `json:"captcha"`
 }
 
-// LoginResponse 登录响应
+// LoginResponse 登录响应（会话由 HTTP cookie 维护，此处字段供参考）
 type LoginResponse struct {
 	UID      int    `json:"uid"`
 	ClientID string `json:"client_id"`
 }
 
-// Problem 题目详情（字段名匹配洛谷 API 实际响应）
+// Problem 题目详情（匹配洛谷 SSR 页面中 lentille-context 的实际结构）
 type Problem struct {
-	PID          string          `json:"pid"`
-	Title        string          `json:"title"`
-	Difficulty   *int            `json:"difficulty"`
-	Tags         []int           `json:"tags"`
-	Description  ProblemDesc     `json:"description"`
-	InputFormat  ProblemIOFormat `json:"inputFormat"`
-	OutputFormat ProblemIOFormat `json:"outputFormat"`
-	Samples      []ProblemSample `json:"sampleTestcases"`
-	Limits       *ProblemLimits  `json:"limits"`
+	PID        string         `json:"pid"`
+	Title      string         `json:"name"`
+	Difficulty int            `json:"difficulty"`
+	Tags       []int          `json:"tags"`
+	Samples    [][]string     `json:"samples"`
+	Limits     ProblemLimits  `json:"limits"`
+	Provider   UserInfo       `json:"provider"`
+	Content    ProblemContent `json:"contenu"`
 }
 
-// DescText 返回题目描述的纯文本
-func (p *Problem) DescText() string {
-	return p.Description.Text
-}
+// DescText 返回题目描述的 Markdown 文本
+func (p *Problem) DescText() string { return p.Content.Description }
 
 // InputText 返回输入格式描述
-func (p *Problem) InputText() string {
-	return p.InputFormat.Description
-}
+func (p *Problem) InputText() string { return p.Content.InputFormat }
 
 // OutputText 返回输出格式描述
-func (p *Problem) OutputText() string {
-	return p.OutputFormat.Description
-}
+func (p *Problem) OutputText() string { return p.Content.OutputFormat }
 
-// TimeLimit 返回时间限制（毫秒），若 API 未提供则返回 0
+// HintText 返回说明/提示
+func (p *Problem) HintText() string { return p.Content.Hint }
+
+// TimeLimit 返回时间限制（ms），取第一个值
 func (p *Problem) TimeLimit() int {
-	if p.Limits == nil {
-		return 0
+	if len(p.Limits.Time) > 0 {
+		return p.Limits.Time[0]
 	}
-	return p.Limits.Time
+	return 0
 }
 
-// MemoryLimit 返回内存限制（KB），若 API 未提供则返回 0
+// MemoryLimit 返回内存限制（KB），取第一个值
 func (p *Problem) MemoryLimit() int {
-	if p.Limits == nil {
-		return 0
+	if len(p.Limits.Memory) > 0 {
+		return p.Limits.Memory[0]
 	}
-	return p.Limits.Memory
+	return 0
 }
 
-// ProblemDesc 题目描述
-type ProblemDesc struct {
-	Text         string   `json:"text"`
-	Notes        []string `json:"notes"`
-	ClosingQuote string   `json:"closingQuote"`
-}
-
-// ProblemIOFormat 输入/输出格式
-type ProblemIOFormat struct {
+// ProblemContent 题目内容（从 contenu/content 字段提取）
+type ProblemContent struct {
 	Description string `json:"description"`
-}
-
-// ProblemSample 输入输出样例
-type ProblemSample struct {
-	Input  string `json:"input"`
-	Output string `json:"output"`
+	InputFormat string `json:"formatI"`
+	OutputFormat string `json:"formatO"`
+	Hint        string `json:"hint"`
+	Background  string `json:"background"`
 }
 
 // ProblemLimits 时空限制
 type ProblemLimits struct {
-	Time   int `json:"time"`
-	Memory int `json:"memory"`
+	Time   []int `json:"time"`
+	Memory []int `json:"memory"`
 }
 
 // SearchParams 题目搜索参数
@@ -102,8 +89,8 @@ type SearchResult struct {
 // ProblemSummary 题目摘要
 type ProblemSummary struct {
 	PID        string `json:"pid"`
-	Title      string `json:"title"`
-	Difficulty *int   `json:"difficulty"`
+	Title      string `json:"name"`
+	Difficulty int    `json:"difficulty"`
 	Tags       []int  `json:"tags"`
 }
 
@@ -134,9 +121,12 @@ type SolutionSummary struct {
 
 // Translation 题目翻译
 type Translation struct {
-	Language    string `json:"language"`
-	Title       string `json:"title"`
+	Title       string `json:"name"`
 	Description string `json:"description"`
+	InputFormat string `json:"formatI"`
+	OutputFormat string `json:"formatO"`
+	Hint        string `json:"hint"`
+	Background  string `json:"background"`
 }
 
 // UserInfo 用户信息
