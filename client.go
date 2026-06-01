@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -84,8 +85,10 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	c.Auth = &AuthService{client: c}
 	c.Problem = &ProblemService{client: c}
 
-	// 尝试加载持久化的 cookie
-	_ = loadCookies(c.cookieJar, c.cookieFile)
+	// 尝试加载持久化的 cookie（文件不存在不算错误）
+	if err := loadCookies(c.cookieJar, c.cookieFile); err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("load cookies from %s: %w", c.cookieFile, err)
+	}
 
 	return c, nil
 }

@@ -1,6 +1,7 @@
 package luogusdk
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 )
@@ -56,7 +57,9 @@ func (a *AuthService) Login(username, password, captcha string) (*LoginResponse,
 		return nil, err
 	}
 
-	_ = a.client.saveCookiesToFile()
+	if err := a.client.saveCookiesToFile(); err != nil {
+		return nil, fmt.Errorf("save cookies: %w", err)
+	}
 
 	return &result, nil
 }
@@ -94,4 +97,14 @@ func (a *AuthService) Verify() error {
 // IsAuthenticated 检查是否已经登录
 func (a *AuthService) IsAuthenticated() bool {
 	return a.client.verifyAuth() == nil
+}
+
+// SaveCookies 手动持久化当前 cookie 到文件
+func (a *AuthService) SaveCookies() error {
+	return a.client.saveCookiesToFile()
+}
+
+// CookiePath 返回 cookie 持久化文件的路径
+func (a *AuthService) CookiePath() string {
+	return a.client.cookieFile
 }
