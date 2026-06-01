@@ -45,7 +45,8 @@ func main() {
 			fmt.Printf("登录失败: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("✓ 登录成功 (UID: %d)\n", result.UID)
+		fmt.Printf("✓ 登录成功\n")
+		_ = result
 	}
 
 	// 5. 获取题目示例
