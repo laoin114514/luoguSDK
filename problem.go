@@ -3,7 +3,6 @@ package luogusdk
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 )
 
 // ProblemService 题目服务
@@ -11,16 +10,16 @@ type ProblemService struct {
 	client *Client
 }
 
-// Get 获取题目详情（从 SSR 页面的 lentille-context 提取 JSON）
+// Get 获取题目详情
 func (p *ProblemService) Get(pid string) (*Problem, error) {
 	path := fmt.Sprintf("/problem/%s", pid)
 	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
 		return nil, fmt.Errorf("get problem %s: status %d", pid, resp.StatusCode)
 	}
 
@@ -32,21 +31,12 @@ func (p *ProblemService) Get(pid string) (*Problem, error) {
 	if err := parseLentilleContext(resp, &result); err != nil {
 		return nil, err
 	}
-
 	return &result.Data.Problem, nil
 }
 
 // Search 搜索题目
 func (p *ProblemService) Search(params SearchParams) (*SearchResult, error) {
-	q := url.Values{}
-	q.Set("_contentOnly", "1")
-	if params.Keyword != "" {
-		q.Set("keyword", params.Keyword)
-	}
-	if params.Page > 0 {
-		q.Set("page", fmt.Sprintf("%d", params.Page))
-	}
-	path := "/problem/list?" + q.Encode()
+	path := fmt.Sprintf("/problem/list?keyword=%s&page=%d", params.Keyword, params.Page)
 	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
@@ -58,30 +48,30 @@ func (p *ProblemService) Search(params SearchParams) (*SearchResult, error) {
 	}
 
 	var result struct {
-		CurrentData struct {
+		Data struct {
 			Problems struct {
-				Result    []ProblemSummary `json:"problems"`
+				Result    []ProblemSummary `json:"result"`
 				Count     int              `json:"count"`
 				TotalPage int              `json:"totalPages"`
 				Page      int              `json:"page"`
 				PerPage   int              `json:"perPage"`
 			} `json:"problems"`
-		} `json:"currentData"`
+		} `json:"data"`
 	}
-	if err := parseBody(resp, &result); err != nil {
+	if err := parseLentilleContext(resp, &result); err != nil {
 		return nil, err
 	}
 	return &SearchResult{
-		Problems: result.CurrentData.Problems.Result,
-		Total:    result.CurrentData.Problems.Count,
-		Page:     result.CurrentData.Problems.Page,
-		PerPage:  result.CurrentData.Problems.PerPage,
+		Problems: result.Data.Problems.Result,
+		Total:    result.Data.Problems.Count,
+		Page:     result.Data.Problems.Page,
+		PerPage:  result.Data.Problems.PerPage,
 	}, nil
 }
 
 // GetSolutions 获取题解列表
 func (p *ProblemService) GetSolutions(pid string, page int) (*SolutionList, error) {
-	path := fmt.Sprintf("/problem/solution?pid=%s&page=%d&_contentOnly=1", pid, page)
+	path := fmt.Sprintf("/problem/solution?pid=%s&page=%d", pid, page)
 	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
@@ -93,30 +83,30 @@ func (p *ProblemService) GetSolutions(pid string, page int) (*SolutionList, erro
 	}
 
 	var result struct {
-		CurrentData struct {
+		Data struct {
 			Solutions struct {
-				Result    []SolutionSummary `json:"solutions"`
+				Result    []SolutionSummary `json:"result"`
 				Count     int               `json:"count"`
 				TotalPage int               `json:"totalPages"`
 				Page      int               `json:"page"`
 				PerPage   int               `json:"perPage"`
 			} `json:"solutions"`
-		} `json:"currentData"`
+		} `json:"data"`
 	}
-	if err := parseBody(resp, &result); err != nil {
+	if err := parseLentilleContext(resp, &result); err != nil {
 		return nil, err
 	}
 	return &SolutionList{
-		Solutions: result.CurrentData.Solutions.Result,
-		Total:     result.CurrentData.Solutions.Count,
-		Page:      result.CurrentData.Solutions.Page,
-		PerPage:   result.CurrentData.Solutions.PerPage,
+		Solutions: result.Data.Solutions.Result,
+		Total:     result.Data.Solutions.Count,
+		Page:      result.Data.Solutions.Page,
+		PerPage:   result.Data.Solutions.PerPage,
 	}, nil
 }
 
 // GetSolutionDetail 获取题解详情
 func (p *ProblemService) GetSolutionDetail(sid string) (*Solution, error) {
-	path := fmt.Sprintf("/problem/solution/%s?_contentOnly=1", sid)
+	path := fmt.Sprintf("/problem/solution/%s", sid)
 	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
@@ -128,19 +118,19 @@ func (p *ProblemService) GetSolutionDetail(sid string) (*Solution, error) {
 	}
 
 	var result struct {
-		CurrentData struct {
+		Data struct {
 			Solution Solution `json:"solution"`
-		} `json:"currentData"`
+		} `json:"data"`
 	}
-	if err := parseBody(resp, &result); err != nil {
+	if err := parseLentilleContext(resp, &result); err != nil {
 		return nil, err
 	}
-	return &result.CurrentData.Solution, nil
+	return &result.Data.Solution, nil
 }
 
-// GetTranslation 获取题目翻译
+// GetTranslation 获取题目翻译（翻译数据嵌在题目详情页的 lentille-context 中）
 func (p *ProblemService) GetTranslation(pid string) ([]Translation, error) {
-	path := fmt.Sprintf("/problem/translation?pid=%s&_contentOnly=1", pid)
+	path := fmt.Sprintf("/problem/%s", pid)
 	resp, err := p.client.get(path)
 	if err != nil {
 		return nil, err
@@ -152,12 +142,18 @@ func (p *ProblemService) GetTranslation(pid string) ([]Translation, error) {
 	}
 
 	var result struct {
-		CurrentData struct {
-			Translations []Translation `json:"translations"`
-		} `json:"currentData"`
+		Data struct {
+			Translations map[string]Translation `json:"translations"`
+		} `json:"data"`
 	}
-	if err := parseBody(resp, &result); err != nil {
+	if err := parseLentilleContext(resp, &result); err != nil {
 		return nil, err
 	}
-	return result.CurrentData.Translations, nil
+
+	var out []Translation
+	for lang, t := range result.Data.Translations {
+		t.Language = lang
+		out = append(out, t)
+	}
+	return out, nil
 }

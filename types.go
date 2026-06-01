@@ -121,12 +121,13 @@ type SolutionSummary struct {
 
 // Translation 题目翻译
 type Translation struct {
-	Title       string `json:"name"`
-	Description string `json:"description"`
-	InputFormat string `json:"formatI"`
+	Language     string `json:"-"`
+	Title        string `json:"name"`
+	Description  string `json:"description"`
+	InputFormat  string `json:"formatI"`
 	OutputFormat string `json:"formatO"`
-	Hint        string `json:"hint"`
-	Background  string `json:"background"`
+	Hint         string `json:"hint"`
+	Background   string `json:"background"`
 }
 
 // UserInfo 用户信息

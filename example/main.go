@@ -37,7 +37,7 @@ func main() {
 		}
 		fmt.Println("✓ CSRF token 获取成功")
 
-		result, err := client.Auth.LoginWithSolver(username, password, luoguSDK.DDDDOCRSolver())
+		result, err := client.Auth.LoginWithSolver(username, password, captchaByHand)
 		if err != nil {
 			fmt.Printf("登录失败: %v\n", err)
 			os.Exit(1)
@@ -79,4 +79,15 @@ func main() {
 			fmt.Printf("  %s - %s (难度: %d)\n", p.PID, p.Title, p.Difficulty)
 		}
 	}
+}
+func captchaByHand(image []byte) (string, error) {
+	if err := os.WriteFile("captcha.jpg", image, 0644); err != nil {
+		return "", fmt.Errorf("保存验证码图片失败: %w", err)
+	}
+	fmt.Print("验证码已保存到 captcha.jpg，请输入验证码: ")
+	var captcha string
+	if _, err := fmt.Scan(&captcha); err != nil {
+		return "", fmt.Errorf("读取验证码输入失败: %w", err)
+	}
+	return captcha, nil
 }
